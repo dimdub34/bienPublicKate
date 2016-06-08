@@ -34,24 +34,26 @@ class PartieBPK(Partie):
     def configure(self, currentsequence):
         logger.debug(u"{} Configure".format(self.joueur))
         self._currentsequence = currentsequence
+        self.periods.clear()
         yield (self.remote.callRemote("configure", get_module_attributes(pms),
                                       self._currentsequence))
         self.joueur.info(u"Ok")
 
-    def new_period(self, periode):
+    @defer.inlineCallbacks
+    def new_period(self, period):
         logger.debug("nouvelle_periode")
-        periode_new = RepetitionsBPK(periode)
+        periode_new = RepetitionsBPK(period)
         self._main_serveur.gestionnaire_base.ajouter(periode_new)
         self.repetitions.append(periode_new)
         self.currentperiod = periode_new
-        logger.info("Période {} -> Ok".format(periode))
+        yield (self.remote.callRemote("new_period", period))
+        logger.info("Periode {} -> Ok".format(period))
 
     @defer.inlineCallbacks
     def display_contribution(self):
         decision_start = datetime.now()
         self.currentperiod.BPK_collectif = yield (
-            self.remote.callRemote(
-                "display_contribution", self.currentperiod.BPK_periode))
+            self.remote.callRemote("display_contribution"))
         self.currentperiod.BPK_decision_time = (
             datetime.now() - decision_start).seconds
         self.currentperiod.BPK_individuel = \
@@ -74,7 +76,7 @@ class PartieBPK(Partie):
         logger.debug("decisions_membres_groupe: {}".format(
             decisions_membres_groupe))
 
-        explic_desapprobation = txt.get_explication_desapprobation(
+        explic_desapprobation = txt.get_expl_desapprobation(
             self.currentperiod.BPK_collectif,
             self.currentperiod.BPK_collectif_groupe)
         desapprobation_start = datetime.now()
@@ -131,10 +133,6 @@ class PartieBPK(Partie):
         self.joueur.remove_wait_mode()
 
     def compute_partpayoff(self, which_sequence):
-        """
-        :param partie_tiree: la sequence tirée au sort
-        :return:
-        """
         self._sequences[self._currentsequence] = self.periods.copy()
 
         assert (which_sequence <= len(self._sequences))
@@ -147,19 +145,6 @@ class PartieBPK(Partie):
             "set_payoffs", self.BPK_gain_ecus, self.BPK_gain_euros))
         logger.debug('gain ecus:{}, gain euros: {:.2f}'.format(
             self.BPK_gain_ecus, self.BPK_gain_euros))
-
-    # @defer.inlineCallbacks
-    # def faire_afficher_historique(self):
-    #     del self._histo[1:]
-    #     for partie in self._liste_periodes:
-    #         cles = partie.keys()
-    #         cles.sort()
-    #         for p in cles:
-    #             self._histo.append([getattr(partie[p], e) for e in
-    #                                 self._histo_vars])
-    #     yield (self.remote.callRemote("afficher_historique", self._histo))
-    #     self.joueur.afficher_info(u"Ok")
-    #     self.joueur.remove_wait_mode()
 
 
 class RepetitionsBPK(Base):

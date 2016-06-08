@@ -9,7 +9,7 @@ import random
 
 import bienPublicKateParametres as pms
 import bienPublicKateTexts as txt
-from bienPublicKateGui import GuiDecision, GuiDesapprobation
+from bienPublicKateGui import DDecision, GuiDesapprobation
 
 logger = logging.getLogger("le2m.{}".format(__name__))
 
@@ -42,7 +42,7 @@ class RemoteBPK(IRemote):
             return renvoi
         else:
             defered = defer.Deferred()
-            ecran_decision = GuiDecision(
+            ecran_decision = DDecision(
                 defered, self.le2mclt.automatique,
                 self.le2mclt.gestionnaire_graphique.ecran_attente,
                 self.histo, self.currentperiod)
@@ -96,23 +96,6 @@ class RemoteBPK(IRemote):
                 self.currentperiod, self.histo, txt_summary)
             ecran_recap.show()
             return defered
-
-    # def remote_display_history(self, historique):
-    #     """
-    #     Fait afficher l'historique
-    #     :param historique:
-    #     :return:1
-    #     """
-    #     assert isinstance(historique, list)
-    #     logger.debug(u"Appel de remote_afficher_historique")
-    #     if self._main_client.simulation or \
-    #             self._main_client.automatique:
-    #         return 1
-    #     ecran_historique = GuiHistorique(
-    #         self._main_client.gestionnaire_graphique.ecran_attente,
-    #         historique)
-    #     ecran_historique.show()
-    #     return 1
 
     def remote_set_payoffs(self, in_euros, in_ecus=None):
         logger.info(u"{} set_payoffs".format(self.le2mclt.uid))

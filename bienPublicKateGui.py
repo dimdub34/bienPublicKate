@@ -2,7 +2,8 @@
 
 from PyQt4 import QtGui, QtCore
 from client.cltgui.cltguidialogs import GuiHistorique
-from client.cltgui.cltguiwidgets import WLabel, WPeriod, WExplication, WSpinbox
+from client.cltgui.cltguiwidgets import WLabel, WPeriod, WExplication, \
+    WSpinbox, WCombo
 from util.utili18n import le2mtrans
 import logging
 import random
@@ -178,3 +179,16 @@ class GuiDesapprobation(QtGui.QDialog):
         self._defered.callback(desapprob_affectees)
         logger.info("Renvoi: {}".format(desapprob_affectees))
         self.accept()
+
+
+class DOrdre(QtGui.QDialog):
+    def __init__(self, parent):
+        QtGui.QDialog.__init__(self, parent)
+
+        layout = QtGui.QVBoxLayout(self)
+
+        wexpl = WExplication(parent=self, text=txt.get_expl_ordres())
+
+        self._ordres = WCombo(parent=self, label=u"Choisir l'ordre",
+                              items=["B_P_DP", "B_D_DP", "B_DP_D", "B_D_D_1",
+                                     "B_D_D_2"])

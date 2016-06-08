@@ -4,6 +4,23 @@ from util.utiltools import get_pluriel
 import bienPublicKateParametres as pms
 
 
+def get_expl_ordres():
+    return u"Cette boîte de dialogue permet de changer le paramètre 'Ordre'." \
+           u"\nB=baseline, P=prélèvement et D=Désapprobation et " \
+           u"DP=désapprobation avec prélèvement.\n " \
+           u"Donc B_P_D signifie baseline puis prélèvement puis désapprobation."
+
+def get_txt_treatment():
+    if pms.TRAITEMENT == pms.BASELINE:
+        return u"Baseline"
+    elif pms.TRAITEMENT == pms.DESAPPROBATION:
+        return u"désapprobation"
+    elif pms.TRAITEMENT == pms.PRELEVEMENT:
+        return u"prélèvement"
+    else:
+        return u"désapprobation avec prélèvement"
+
+
 def get_histo_headers():
     return [
         u"Période", u"Compte\nindividuel", u"Compte\ncollectif",
