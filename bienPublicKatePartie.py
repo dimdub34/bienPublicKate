@@ -6,11 +6,12 @@ import logging
 from datetime import datetime
 from sqlalchemy.orm import relationship
 from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from server.servbase import Base
+from server.servparties import Partie
+import bienPublicKateParametres as pms
+import bienPublicKateTexts as txt
+from util.utiltools import get_module_attributes
 
-from le2mServ.le2mServBase import Base
-from le2mServ.le2mServParties import Partie
-from le2mUtile.le2mUtileTools import get_monnaie
-import bienPublicKateParametres as parametres
 
 logger = logging.getLogger("le2m.{}".format(__name__))
 
@@ -22,183 +23,143 @@ class PartieBPK(Partie):
     repetitions = relationship('RepetitionsBPK')
 
     def __init__(self, main_serveur, joueur):
-        super(PartieBPK, self).__init__("bienPublicKate", "BPK")
-        self._main_serveur = main_serveur
-        self.joueur = joueur
-        self.BPK_gain_ecus, self.BPK_gain_euros = 0, 0
-        self._texte_final = ""
-        self._histo_vars = ["BPK_periode", "BPK_individuel", "BPK_collectif",
-                            "BPK_collectif_groupe", "BPK_gain_individuel",
-                            "BPK_gain_collectif", "BPK_gain_periode",
-                            "BPK_gain_cumule"
-                            ]
-        self._histo = [[u"Période", u"Compte\nindividuel", u"Compte\ncollectif",
-                        u"Total\ncompte\ncollectif", u"Gain\ncompte\nindividuel",
-                        u"Gain\ncompte\ncollectif", u"Gain\npériode",
-                        u"Gain\ncumulé"]
-                       ]
-        self._periodes = {}
-        self._liste_periodes = []
+        super(PartieBPK, self).__init__(
+            nom="bienPublicKate", nom_court="BPK", joueur=joueur,
+            le2mserv=main_serveur)
+        self.BPK_gain_ecus = 0
+        self.BPK_gain_euros = 0
+        self._sequences = {}
 
     @defer.inlineCallbacks
-    def set_traitement(self):
-        """
-        Cette fonction est appelée au lancement d'un nouvelle partie
-        :return:
-        """
-        yield (self.remote.callRemote(
-            "set_traitement", parametres.TRAITEMENT))
-        self._periodes.clear()
-        del self._histo[1:]
+    def configure(self, currentsequence):
+        logger.debug(u"{} Configure".format(self.joueur))
+        self._currentsequence = currentsequence
+        yield (self.remote.callRemote("configure", get_module_attributes(pms),
+                                      self._currentsequence))
+        self.joueur.info(u"Ok")
 
-    def nouvelle_periode(self, periode):
+    def new_period(self, periode):
         logger.debug("nouvelle_periode")
         periode_new = RepetitionsBPK(periode)
         self._main_serveur.gestionnaire_base.ajouter(periode_new)
         self.repetitions.append(periode_new)
-        self.periode_courante = periode_new
+        self.currentperiod = periode_new
         logger.info("Période {} -> Ok".format(periode))
 
     @defer.inlineCallbacks
-    def afficher_ecran_contribution(self):
-        """
-        Fait afficher l'écran de contribution sur les postes clients.
-        """
+    def display_contribution(self):
         decision_start = datetime.now()
-        self.periode_courante.BPK_collectif = yield (
+        self.currentperiod.BPK_collectif = yield (
             self.remote.callRemote(
-                "afficher_ecran_contribution",
-                self.periode_courante.BPK_periode
-            )
-        )
-        decision_end = datetime.now()
-        self.periode_courante.BPK_decision_time = (
-            decision_end - decision_start
-        ).seconds
-        self.periode_courante.BPK_individuel = \
-            self.periode_courante.BPK_dotation - \
-            self.periode_courante.BPK_collectif
-        self.joueur.afficher_info("{}".format(
-            self.periode_courante.BPK_collectif)
-        )
+                "display_contribution", self.currentperiod.BPK_periode))
+        self.currentperiod.BPK_decision_time = (
+            datetime.now() - decision_start).seconds
+        self.currentperiod.BPK_individuel = \
+            self.currentperiod.BPK_dotation - \
+            self.currentperiod.BPK_collectif
+        self.joueur.afficher_info("{}".format(self.currentperiod.BPK_collectif))
         self.joueur.remove_wait_mode()
 
     @defer.inlineCallbacks
-    def afficher_ecran_desapprobation(self):
+    def display_desapprobation(self):
         """
-        :param: les décisions de tous les membres du groupe. C'est un dictionnaire
-        avec l'uid et la décision
+        :param: les décisions de tous les membres du groupe.
+        C'est un dictionnaire avec l'uid et la décision
         :return:
         """
         decisions_membres_groupe = dict()
         for i in range(3):
             decisions_membres_groupe[i] = \
-                getattr(self.periode_courante, "BPK_collectif_{}".format(i))
+                getattr(self.currentperiod, "BPK_collectif_{}".format(i))
         logger.debug("decisions_membres_groupe: {}".format(
-            decisions_membres_groupe)
-        )
-        explic_desapprobation = parametres.get_explication_desapprobation(
-            self.periode_courante.BPK_collectif,
-            self.periode_courante.BPK_collectif_groupe
-        )
+            decisions_membres_groupe))
+
+        explic_desapprobation = txt.get_explication_desapprobation(
+            self.currentperiod.BPK_collectif,
+            self.currentperiod.BPK_collectif_groupe)
         desapprobation_start = datetime.now()
         desapprobations = yield (self.remote.callRemote(
-            "afficher_ecran_desapprobation", self.periode_courante.BPK_periode,
-            explic_desapprobation, decisions_membres_groupe)
-        )
+            "afficher_ecran_desapprobation", self.currentperiod.BPK_periode,
+            explic_desapprobation, decisions_membres_groupe))
         desapprobation_end = datetime.now()
-        self.periode_courante.BPK_desapprobation_time = (
-            desapprobation_end - desapprobation_start
-        ).seconds
-        for k, v in desapprobations.iteritems():
-            setattr(self.periode_courante, "BPK_desapprobation_{}".format(k), v)
+        self.currentperiod.BPK_desapprobation_time = (
+            desapprobation_end - desapprobation_start).seconds
+
+        for k, v in desapprobations.viewitems():
+            setattr(self.currentperiod, "BPK_desapprobation_{}".format(k), v)
         self.joueur.afficher_info(u"{}".format(
-            ["j{}: {}".format(getattr(self.periode_courante,
-                                      "BPK_membre_{}".format(k)
-                                      ).split("_")[2], v) for k, v in
-             desapprobations.items()])
-        )
+            ["j{}: {}".format(
+                getattr(self.currentperiod, "BPK_membre_{}".format(k)).\
+                    split("_")[2], v) for k, v in desapprobations.items()]))
         self.joueur.remove_wait_mode()
 
-    def calculer_gain_periode(self):
-        logger.debug(u"call of calculer_gain_periode")
-        self.periode_courante.BPK_gain_individuel = self.periode_courante. \
-            BPK_individuel * parametres.RENDEMENT_COMPTE_INDIVIDUEL
-        self.periode_courante.BPK_gain_collectif = \
-            self.periode_courante.BPK_collectif_groupe * parametres.MPCR
-        self.periode_courante.BPK_gain_periode = \
-            self.periode_courante.BPK_gain_individuel + \
-            self.periode_courante.BPK_gain_collectif
+    def compute_periodpayoff(self):
+        logger.debug(u"call of compute_periodpayoff")
 
-        if self.periode_courante.BPK_periode == 1:
-            self.periode_courante.BPK_gain_cumule = self.periode_courante. \
+        self.currentperiod.BPK_gain_individuel = self.currentperiod. \
+            BPK_individuel * pms.RENDEMENT_COMPTE_INDIVIDUEL
+        self.currentperiod.BPK_gain_collectif = \
+            self.currentperiod.BPK_collectif_groupe * pms.MPCR
+        self.currentperiod.BPK_gain_periode = \
+            self.currentperiod.BPK_gain_individuel + \
+            self.currentperiod.BPK_gain_collectif
+
+        # cumulative payoff
+        if self.currentperiod.BPK_periode == 1:
+            self.currentperiod.BPK_gain_cumule = self.currentperiod. \
                 BPK_gain_periode
         else:
-            self.periode_courante.BPK_gain_cumule = \
+            self.currentperiod.BPK_gain_cumule = \
                 self._periodes[
-                    self.periode_courante.BPK_periode - 1].BPK_gain_cumule + \
-                self.periode_courante.BPK_gain_periode
-        self._periodes[self.periode_courante.BPK_periode] = self.periode_courante
+                    self.currentperiod.BPK_periode - 1].BPK_gain_cumule + \
+                self.currentperiod.BPK_gain_periode
+
+        # save the period
+        self.periods[self.currentperiod.BPK_periode] = self.currentperiod
+
         logger.info("Joueur {} - gains: {},{}".format(
-            self.joueur, self.periode_courante.BPK_gain_periode,
-            self.periode_courante.BPK_gain_cumule))
+            self.joueur, self.currentperiod.BPK_gain_periode,
+            self.currentperiod.BPK_gain_cumule))
 
     @defer.inlineCallbacks
-    def afficher_ecran_recapitulatif(self):
-        # recap ================================================================
-        params = [self.periode_courante.BPK_individuel,
-                  self.periode_courante.BPK_collectif,
-                  self.periode_courante.BPK_collectif_groupe,
-                  self.periode_courante.BPK_gain_individuel,
-                  self.periode_courante.BPK_gain_collectif,
-                  self.periode_courante.BPK_gain_periode]
-        if self.periode_courante.BPK_traitement == parametres.DESAPPROBATION or \
-                self.periode_courante.BPK_traitement == \
-                parametres.DESAPPROBATION_PRELEVEMENT:
-            params.append(self.periode_courante.BPK_desapprobation_recu)
-        texte_recap = parametres.get_texte_recapitulatif(*params)
-
-        # historique ===========================================================
-        self._histo.append([getattr(self.periode_courante, e) for e in
-                            self._histo_vars])
-
+    def display_summary(self):
+        txt_summary = txt.get_txt_summary(self.currentperiod)
+        period_dict = self.currentperiod.todict()
         yield (self.remote.callRemote(
-            "afficher_ecran_recapitulatif", texte_recap, self._histo,
-            self.periode_courante.BPK_periode))
+            "display_summary", txt_summary, period_dict))
         self.joueur.afficher_info("Ok")
         self.joueur.remove_wait_mode()
 
-    def calculer_gain_partie(self, partie_tiree):
+    def compute_partpayoff(self, which_sequence):
         """
         :param partie_tiree: la sequence tirée au sort
         :return:
         """
-        self._liste_periodes.append(self._periodes.copy())
-        assert (partie_tiree <= len(self._liste_periodes))
-        logger.debug(u"Partie tirée: {}".format(partie_tiree))
-        self.BPK_gain_ecus = self._liste_periodes[partie_tiree][parametres.
+        self._sequences[self._currentsequence] = self.periods.copy()
+
+        assert (which_sequence <= len(self._sequences))
+        logger.debug(u"Partie tirée: {}".format(which_sequence))
+
+        self.BPK_gain_ecus = self._sequences[which_sequence][pms.
             NOMBRE_PERIODES].BPK_gain_cumule
-        self.BPK_gain_euros = self.BPK_gain_ecus * parametres.TAUX_CONVERSION
-        self._texte_final = u"C'est la partie {} qui a été tirée au sort pour \
-la rémunération. A cette partie vous avez gagné {:.2f} {}, soit {:.2f} {}.".\
-            format(partie_tiree + 1, self.BPK_gain_ecus,
-                   get_monnaie(self.BPK_gain_ecus), self.BPK_gain_euros,
-                   get_monnaie(self.BPK_gain_euros, u"euro"))
+        self.BPK_gain_euros = self.BPK_gain_ecus * pms.TAUX_CONVERSION
+        yield (self.remote.callRemote(
+            "set_payoffs", self.BPK_gain_ecus, self.BPK_gain_euros))
         logger.debug('gain ecus:{}, gain euros: {:.2f}'.format(
             self.BPK_gain_ecus, self.BPK_gain_euros))
 
-    @defer.inlineCallbacks
-    def faire_afficher_historique(self):
-        del self._histo[1:]
-        for partie in self._liste_periodes:
-            cles = partie.keys()
-            cles.sort()
-            for p in cles:
-                self._histo.append([getattr(partie[p], e) for e in
-                                    self._histo_vars])
-        yield (self.remote.callRemote("afficher_historique", self._histo))
-        self.joueur.afficher_info(u"Ok")
-        self.joueur.remove_wait_mode()
+    # @defer.inlineCallbacks
+    # def faire_afficher_historique(self):
+    #     del self._histo[1:]
+    #     for partie in self._liste_periodes:
+    #         cles = partie.keys()
+    #         cles.sort()
+    #         for p in cles:
+    #             self._histo.append([getattr(partie[p], e) for e in
+    #                                 self._histo_vars])
+    #     yield (self.remote.callRemote("afficher_historique", self._histo))
+    #     self.joueur.afficher_info(u"Ok")
+    #     self.joueur.remove_wait_mode()
 
 
 class RepetitionsBPK(Base):
@@ -233,10 +194,16 @@ class RepetitionsBPK(Base):
     BPK_gain_cumule = Column(Float)
 
     def __init__(self, periode):
-        self.BPK_traitement = parametres.TRAITEMENT
-        self.BPK_ordre = parametres.ORDRE
+        self.BPK_traitement = pms.TRAITEMENT
+        self.BPK_ordre = pms.ORDRE
         self.BPK_periode = periode
-        self.BPK_dotation = parametres.DOTATION
+        self.BPK_dotation = pms.DOTATION
         self.BPK_decision_time = 0
         self.BPK_gain_periode = 0
         self.BPK_gain_cumule = 0
+
+    def todict(self, joueur=None):
+        temp = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        if joueur:
+            temp["joueur"] = joueur
+        return temp

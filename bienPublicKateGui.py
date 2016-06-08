@@ -1,161 +1,180 @@
 # -*- coding: utf-8 -*-
 
 from PyQt4 import QtGui, QtCore
+from client.cltgui.cltguidialogs import GuiHistorique
+from client.cltgui.cltguiwidgets import WLabel, WPeriod, WExplication, WSpinbox
+from util.utili18n import le2mtrans
 import logging
 import random
-from le2mUtile import le2mUtileTools
 
-from le2mClient.le2mClientGui.le2mClientGuiDialogs import GuiHistorique
+import bienPublicKateParametres as pms
+import bienPublicKateTexts as txt
+from bienPublicKateGuiSrc import BPK_wid_desapprobation
 
-import bienPublicKateParametres as parametres
-from bienPublicKateGuiSrc import bienPublicKateGuiSrcDecision, \
-    bienPublicKateGuiSrcDesapprobation
 
 logger = logging.getLogger("le2m.{}".format(__name__))
 
 
-class GuiDecision(QtGui.QDialog):
-    def __init__(self, defered, automatique, ecran_attente, historique,
-                 periode):
-        QtGui.QDialog.__init__(self, parent=ecran_attente)
-        self.ui = bienPublicKateGuiSrcDecision.Ui_Dialog()
-        self.ui.setupUi(self)
+class DDecision(QtGui.QDialog):
+    def __init__(self, defered, automatique, parent, historique, period):
+        QtGui.QDialog.__init__(self, parent)
+
         self._defered = defered
         self._automatique = automatique
+        self._historique = GuiHistorique(self, historique, size=(700, 500))
 
-        self.ui.label_periode.setText(u"Période {}".format(periode))
-        self.ui.pushButton_historique.clicked.\
-            connect(lambda _: self._afficher_historique(historique))
-        self.ui.textEdit_explication.setText(parametres.TEXTE_EXPLICATION)
-        self.ui.textEdit_explication.setReadOnly(True)
-        self.ui.textEdit_explication.setFixedSize(400, 80)
-        self.ui.textEdit_message.setVisible(False)  # vient de bienPublicRustam
-        self.ui.label_decision.setText(parametres.LABEL_DECISION)
-        self.ui.spinBox_decision.setMinimum(parametres.MIN)
-        self.ui.spinBox_decision.setMaximum(parametres.MAX)
-        self.ui.spinBox_decision.setSingleStep(parametres.STEP)
-        self.ui.spinBox_decision.setValue(parametres.MIN)
-        self.ui.buttonBox.accepted.connect(self.accept)
-        self.ui.buttonBox.rejected.connect(self.reject)
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Cancel). \
-            setVisible(False)
-        self.setWindowTitle(u"Décision")
-        self.setFixedSize(600, 320)
+        layout = QtGui.QVBoxLayout(self)
+
+        wperiod = WPeriod(period=period, ecran_historique=self._historique,
+                          parent=self)
+        layout.addWidget(wperiod)
+
+        wexplanation = WExplication(
+            text=txt.get_expl_decision(), parent=self, size=(500, 60))
+        layout.addWidget(wexplanation)
+
+        self._wdecision = WSpinbox(label=txt.get_lab_decision(), minimum=pms.MIN,
+                             maximum=pms.MAX, interval=pms.STEP, parent=self,
+                             automatique=self._automatique)
+        layout.addWidget(self._wdecision)
+
+        buttons = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok)
+        buttons.accepted.connect(self._accept)
+        layout.addWidget(buttons)
+
+        self.setWindowTitle(le2mtrans(u"Decision"))
+        self.adjustSize()
+        self.setFixedSize(self.size())
 
         if self._automatique:
-            self.ui.spinBox_decision.setValue(random.randint(parametres.MIN,
-                                                             parametres.MAX))
-            try:
-                self._timer_automatique.start(7000)
-            except AttributeError:
-                self._timer_automatique = QtCore.QTimer()
-                self._timer_automatique.timeout.connect(self.accept)
-                self._timer_automatique.start(7000)
+            self._timer_automatique = QtCore.QTimer()
+            self._timer_automatique.timeout.connect(
+                buttons.button(QtGui.QDialogButtonBox.Ok).click)
+            self._timer_automatique.start(7000)
 
     def reject(self):
         pass
 
-    def accept(self):
+    def _accept(self):
         try:
             self._timer_automatique.stop()
         except AttributeError:
             pass
-        decision = self.ui.spinBox_decision.value()
-        if not self._automatique:
-            confirmation = QtGui.QMessageBox.question(
-                self, u"Confirmation", u"Vous confirmez votre décision?",
-                QtGui.QMessageBox.No | QtGui.QMessageBox.Yes)
-            if confirmation != QtGui.QMessageBox.Yes:
-                return
-        logger.info("Renvoi: {}".format(decision))
-        self._defered.callback(decision)
-        super(GuiDecision, self).accept()
 
-    def _afficher_historique(self, historique):
-        ecran_historique = GuiHistorique(self, historique)
-        ecran_historique.show()        
+        try:
+            decision = self._wdecision.get_value()
+        except ValueError as e:
+            return QtGui.QMessageBox.warning(
+                self, le2mtrans(u"Warning"), e.message)
+
+        if not self._automatique:
+            if not self._sinistred:
+                if not QtGui.QMessageBox.question(
+                    self, le2mtrans(u"Confirmation"),
+                    le2mtrans(u"Do you confirm your choice?"),
+                    QtGui.QMessageBox.No | QtGui.QMessageBox.Yes) == \
+                        QtGui.QMessageBox.Yes:
+                    return
+
+        logger.info(u"Send back {}".format(decision))
+        self.accept()
+        self._defered.callback(decision)
+
+
+class WDesapprobation(QtGui.QWidget):
+    def __init__(self, parent, dec_to_display, automatique=False):
+        QtGui.QWidget.__init__(self, parent)
+
+        self.ui = BPK_wid_desapprobation.Ui_Form()
+        self.ui.setupUi(self)
+
+        labels = txt.get_labs_desapprobation()
+        self.ui.label_compte.setText(labels[1])
+        self.ui.label_desapprobation.setText(labels[2])
+
+        for i in range(3):
+            spb_cpte = getattr(self.ui, "spinBox_{}".format(i))
+            spb_cpte.setValue(dec_to_display[0])
+            spb_cpte.setReadOnly(True)
+            spb_desapp = getattr(self.ui, "spinBox_des_{}".format(i))
+            spb_desapp.setMinimum(pms.DESAPPROBATION_MIN)
+            spb_desapp.setMaximum(pms.DESAPPROBATION_MAX)
+            spb_desapp.setSingleStep(pms.DESAPPROBATION_STEP)
+
+        if automatique:
+            for i in range(3):
+                spb_desapp = getattr(self.ui, "spinBox_des_{}".format(i))
+                spb_desapp.setValue(random.randint(
+                    pms.DESAPPROBATION_MIN, pms.DESAPPROBATION_MAX,
+                    pms.DESAPPROBATION_STEP))
+
+    def get_desapprobations(self):
+        return [getattr(self.ui, "spinBox_des_{}".format(i)).value()
+                for i in range(3)]
 
 
 class GuiDesapprobation(QtGui.QDialog):
-    def __init__(self, defered, automatique, ecran_attente, historique,
-                 periode, explication, decisions_membres):
-        QtGui.QDialog.__init__(self, parent=ecran_attente)
-        self.ui = bienPublicKateGuiSrcDesapprobation.Ui_Dialog()
-        self.ui.setupUi(self)
+    def __init__(self, defered, automatique, parent, historique,
+                 period, explication, decisions_membres):
+        QtGui.QDialog.__init__(self, parent)
+
         self._defered = defered
         self._automatique = automatique
+        self._historique = GuiHistorique(self, historique, size=(700, 500))
 
-        self.ui.label_periode.setText(u"Période {}".format(periode))
-        self.ui.pushButton_historique.clicked.\
-            connect(lambda _: self._afficher_historique(historique))
-        self.ui.textEdit_explication.setText(explication)
-        self.ui.textEdit_explication.setReadOnly(True)
-        self.ui.textEdit_explication.setFixedSize(400, 80)
+        layout = QtGui.QVBoxLayout(self)
 
-        for i in range(3):
-            getattr(self.ui, "spinBox_des_{}".format(i)).setMinimum(
-                parametres.DESAPPROBATION_MIN)
-            getattr(self.ui, "spinBox_des_{}".format(i)).setMaximum(
-                parametres.DESAPPROBATION_MAX)
-            getattr(self.ui, "spinBox_des_{}".format(i)).setSingleStep(
-                parametres.DESAPPROBATION_STEP)
-            getattr(self.ui, "spinBox_des_{}".format(i)).setValue(
-                parametres.DESAPPROBATION_MIN)
+        wperiod = WPeriod(period=period, ecran_historique=self._historique,
+                          parent=self)
+        layout.addWidget(wperiod)
 
-        self._ordre = range(3)
-        random.shuffle(self._ordre)
-        self._decisions_membres = decisions_membres
-        for i, o in enumerate(self._ordre):
-            getattr(self.ui, "spinBox_{}".format(i)).setValue(
-                self._decisions_membres[o])
+        wexplanation = WExplication(
+            text=explication, parent=self, size=(500, 60))
+        layout.addWidget(wexplanation)
 
-        self.ui.buttonBox.accepted.connect(self.accept)
-        self.ui.buttonBox.rejected.connect(self.reject)
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Cancel). \
-            setVisible(False)
-        self.setWindowTitle(u"Points de désapprobation")
-        self.setFixedSize(600, 320)
+        lab_desapprobation = WLabel(parent=self,
+                                    text=txt.get_labs_desapprobation()[0])
+        layout.addWidget(lab_desapprobation)
+
+        self._ordre = random.shuffle(range(3))
+        dec_to_display = [decisions_membres.get(i) for i in self._ordre]
+        self._wid_desapprobation = WDesapprobation(
+            parent=self, dec_to_display=dec_to_display,
+            automatique=self._automatique)
+        layout.addWidget(self._wid_desapprobation)
+
+        buttons = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok)
+        buttons.accepted.connect(self._accept)
+        layout.addWidget(buttons)
+
+        self.setWindowTitle(le2mtrans(u"Désapprobation"))
+        self.adjustSize()
+        self.setFixedSize(self.size())
 
         if self._automatique:
-            for i in range(3):
-                getattr(self.ui, "spinBox_des_{}".format(i)).setValue(
-                    random.randint(0, parametres.DESAPPROBATION_MAX)
-                )
-            try:
-                self._timer_automatique.start(7000)
-            except AttributeError:
-                self._timer_automatique = QtCore.QTimer()
-                self._timer_automatique.timeout.connect(self.accept)
-                self._timer_automatique.start(7000)
+            self._timer_automatique = QtCore.QTimer()
+            self._timer_automatique.timeout.connect(
+                buttons.button(QtGui.QDialogButtonBox.Ok).click)
+            self._timer_automatique.start(7000)
 
     def reject(self):
         pass
 
-    def accept(self):
+    def _accept(self):
         try:
             self._timer_automatique.stop()
         except AttributeError:
             pass
-        decisions = dict()
-        for i, o in enumerate(self._ordre):
-            decisions[o] = getattr(self.ui, "spinBox_des_{}".format(i)).value()
-            if decisions[o] < 0:
-                QtGui.QMessageBox.warning(
-                    self, u"Attention", u"Vous devez saisir une valeur "
-                                        u"comprise entre 0 et {}.".format(
-                        parametres.DESAPPROBATION_MAX)
-                )
-                return
+        desapprob = self._wid_desapprobation.get_desapprobations()
+        desapprob_affectees = {}
+        for i, val in enumerate(self._ordre):
+            desapprob_affectees[val] = desapprob[i]
         if not self._automatique:
             confirmation = QtGui.QMessageBox.question(
                 self, u"Confirmation", u"Vous confirmez vos décisions?",
                 QtGui.QMessageBox.No | QtGui.QMessageBox.Yes)
             if confirmation != QtGui.QMessageBox.Yes:
                 return
-        self._defered.callback(decisions)
-        logger.info("Renvoi: {}".format(decisions))
-        super(GuiDesapprobation, self).accept()
-
-    def _afficher_historique(self, historique):
-        ecran_historique = GuiHistorique(self, historique)
-        ecran_historique.show()
+        self._defered.callback(desapprob_affectees)
+        logger.info("Renvoi: {}".format(desapprob_affectees))
+        self.accept()
