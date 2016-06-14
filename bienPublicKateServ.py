@@ -67,7 +67,7 @@ class Serveur(object):
             pms.RENDEMENT_COMPTE_INDIVIDUEL = pms.RENDEMENT_COMPTE_INDIVIDUEL_PRELEVEMENT
 
         # confirmation start part ==============================================
-        confirmation = self._le2mserv.gestionnaire_graphique.afficher_question(
+        confirmation = self._le2mserv.gestionnaire_graphique.question(
             u"Démarrer bien public - " + txt.get_txt_treatment())
         if not confirmation:
             return
@@ -134,7 +134,7 @@ class Serveur(object):
                             self._le2mserv.gestionnaire_groupes.
                                     get_autres_membres_groupe(j.joueur)):
                         setattr(j.currentperiod, "BPK_collectif_{}".format(i),
-                                l.get_partie("bienPublicKate").
+                                l.get_part("bienPublicKate").
                                 currentperiod.BPK_collectif)
                 for j in v:
                     j.currentperiod.BPK_collectif_groupe = total_groupe
@@ -157,12 +157,12 @@ class Serveur(object):
                         for l in self._le2mserv.gestionnaire_groupes.\
                                 get_autres_membres_groupe(j.joueur):
                             for m in range(3):
-                                if getattr(l.get_partie("bienPublicKate").
+                                if getattr(l.get_part("bienPublicKate").
                                                    currentperiod,
                                            "BPK_membre_{}".format(m)) == \
                                         j.joueur.uid:
                                     desapp = getattr(
-                                        l.get_partie("bienPublicKate").
+                                        l.get_part("bienPublicKate").
                                         currentperiod,
                                         "BPK_desapprobation_{}".format(m))
                                     logger.debug("desapp {} pour {}: {}".format(

@@ -43,7 +43,7 @@ class PartieBPK(Partie):
     def new_period(self, period):
         logger.debug("nouvelle_periode")
         periode_new = RepetitionsBPK(period)
-        self._main_serveur.gestionnaire_base.ajouter(periode_new)
+        self.le2mserv.gestionnaire_base.ajouter(periode_new)
         self.repetitions.append(periode_new)
         self.currentperiod = periode_new
         yield (self.remote.callRemote("new_period", period))
@@ -59,8 +59,8 @@ class PartieBPK(Partie):
         self.currentperiod.BPK_individuel = \
             self.currentperiod.BPK_dotation - \
             self.currentperiod.BPK_collectif
-        self.joueur.afficher_info("{}".format(self.currentperiod.BPK_collectif))
-        self.joueur.remove_wait_mode()
+        self.joueur.info("{}".format(self.currentperiod.BPK_collectif))
+        self.joueur.remove_waitmode()
 
     @defer.inlineCallbacks
     def display_desapprobation(self):
@@ -89,11 +89,11 @@ class PartieBPK(Partie):
 
         for k, v in desapprobations.viewitems():
             setattr(self.currentperiod, "BPK_desapprobation_{}".format(k), v)
-        self.joueur.afficher_info(u"{}".format(
+        self.joueur.info(u"{}".format(
             ["j{}: {}".format(
                 getattr(self.currentperiod, "BPK_membre_{}".format(k)).\
                     split("_")[2], v) for k, v in desapprobations.items()]))
-        self.joueur.remove_wait_mode()
+        self.joueur.remove_waitmode()
 
     def compute_periodpayoff(self):
         logger.debug(u"call of compute_periodpayoff")
@@ -102,26 +102,26 @@ class PartieBPK(Partie):
             BPK_individuel * pms.RENDEMENT_COMPTE_INDIVIDUEL
         self.currentperiod.BPK_gain_collectif = \
             self.currentperiod.BPK_collectif_groupe * pms.MPCR
-        self.currentperiod.BPK_gain_periode = \
+        self.currentperiod.BPK_periodpayoff = \
             self.currentperiod.BPK_gain_individuel + \
             self.currentperiod.BPK_gain_collectif
 
         # cumulative payoff
         if self.currentperiod.BPK_periode == 1:
-            self.currentperiod.BPK_gain_cumule = self.currentperiod. \
-                BPK_gain_periode
+            self.currentperiod.BPK_cumulativepayoff = self.currentperiod. \
+                BPK_periodpayoff
         else:
-            self.currentperiod.BPK_gain_cumule = \
+            self.currentperiod.BPK_cumulativepayoff = \
                 self._periodes[
-                    self.currentperiod.BPK_periode - 1].BPK_gain_cumule + \
-                self.currentperiod.BPK_gain_periode
+                    self.currentperiod.BPK_periode - 1].BPK_cumulativepayoff + \
+                self.currentperiod.BPK_periodpayoff
 
         # save the period
         self.periods[self.currentperiod.BPK_periode] = self.currentperiod
 
         logger.info("Joueur {} - gains: {},{}".format(
-            self.joueur, self.currentperiod.BPK_gain_periode,
-            self.currentperiod.BPK_gain_cumule))
+            self.joueur, self.currentperiod.BPK_periodpayoff,
+            self.currentperiod.BPK_cumulativepayoff))
 
     @defer.inlineCallbacks
     def display_summary(self):
@@ -129,8 +129,8 @@ class PartieBPK(Partie):
         period_dict = self.currentperiod.todict()
         yield (self.remote.callRemote(
             "display_summary", txt_summary, period_dict))
-        self.joueur.afficher_info("Ok")
-        self.joueur.remove_wait_mode()
+        self.joueur.info("Ok")
+        self.joueur.remove_waitmode()
 
     def compute_partpayoff(self, which_sequence):
         self._sequences[self._currentsequence] = self.periods.copy()
@@ -139,7 +139,7 @@ class PartieBPK(Partie):
         logger.debug(u"Partie tirée: {}".format(which_sequence))
 
         self.BPK_gain_ecus = self._sequences[which_sequence][pms.
-            NOMBRE_PERIODES].BPK_gain_cumule
+            NOMBRE_PERIODES].BPK_cumulativepayoff
         self.BPK_gain_euros = self.BPK_gain_ecus * pms.TAUX_CONVERSION
         yield (self.remote.callRemote(
             "set_payoffs", self.BPK_gain_ecus, self.BPK_gain_euros))
@@ -175,8 +175,8 @@ class RepetitionsBPK(Base):
     BPK_desapprobation_time = Column(Integer)
     BPK_gain_individuel = Column(Float)
     BPK_gain_collectif = Column(Float)
-    BPK_gain_periode = Column(Float)
-    BPK_gain_cumule = Column(Float)
+    BPK_periodpayoff = Column(Float)
+    BPK_cumulativepayoff = Column(Float)
 
     def __init__(self, periode):
         self.BPK_traitement = pms.TRAITEMENT
@@ -184,8 +184,8 @@ class RepetitionsBPK(Base):
         self.BPK_periode = periode
         self.BPK_dotation = pms.DOTATION
         self.BPK_decision_time = 0
-        self.BPK_gain_periode = 0
-        self.BPK_gain_cumule = 0
+        self.BPK_periodpayoff = 0
+        self.BPK_cumulativepayoff = 0
 
     def todict(self, joueur=None):
         temp = {c.name: getattr(self, c.name) for c in self.__table__.columns}
