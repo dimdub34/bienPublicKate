@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from util.utiltools import get_pluriel
-import bienPublicKateParametres as pms
+import bienPublicKateParams as pms
 
 
 def get_expl_ordres():

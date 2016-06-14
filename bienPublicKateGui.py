@@ -8,7 +8,7 @@ from util.utili18n import le2mtrans
 import logging
 import random
 
-import bienPublicKateParametres as pms
+import bienPublicKateParams as pms
 import bienPublicKateTexts as txt
 from bienPublicKateGuiSrc import BPK_wid_desapprobation
 

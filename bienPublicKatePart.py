@@ -8,7 +8,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy import Column, Integer, String, Float, ForeignKey
 from server.servbase import Base
 from server.servparties import Partie
-import bienPublicKateParametres as pms
+import bienPublicKateParams as pms
 import bienPublicKateTexts as txt
 from util.utiltools import get_module_attributes
 

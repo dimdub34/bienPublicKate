@@ -1,1 +1,1 @@
-import bienPublicKatePartie
+import bienPublicKatePart

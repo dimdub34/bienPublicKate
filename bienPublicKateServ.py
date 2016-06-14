@@ -6,7 +6,7 @@ from collections import OrderedDict
 import random
 from util import utiltools
 from util.utili18n import le2mtrans
-import bienPublicKateParametres as pms
+import bienPublicKateParams as pms
 import bienPublicKateTexts as txt
 from bienPublicKateGui import DOrdre
 
@@ -36,8 +36,6 @@ class Serveur(object):
         actions[u"Afficher les gains"] = lambda _: self._le2mserv. \
             gestionnaire_experience.afficher_ecran_gains_partie(
             "bienPublicKate")
-        # actions[u"Faire afficher l'historique complet"] = lambda _: \
-        #     self._faire_afficher_historique()
         self._le2mserv.gestionnaire_graphique.add_topartmenu(
             u"Bien Public Kate", actions)
 

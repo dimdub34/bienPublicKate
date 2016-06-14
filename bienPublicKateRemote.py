@@ -7,7 +7,7 @@ import logging
 import random
 
 
-import bienPublicKateParametres as pms
+import bienPublicKateParams as pms
 import bienPublicKateTexts as txt
 from bienPublicKateGui import DDecision, GuiDesapprobation
 
