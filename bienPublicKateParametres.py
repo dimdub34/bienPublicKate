@@ -14,7 +14,7 @@ B_D_D_1 = 3
 B_D_D_2 = 3
 
 # [PARAMETERS] Some parameters can be changed
-ORDRE = B_P_DP  # possible de le changer dans le menu de l'expérience
+ORDRE = B_DP_D  # possible de le changer dans le menu de l'expérience
 TAUX_CONVERSION = 0.067
 NOMBRE_PERIODES = 10
 TAILLE_GROUPES = 4  # ne pas changer sinon erreur

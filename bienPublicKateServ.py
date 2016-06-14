@@ -197,6 +197,6 @@ class Serveur(object):
     def _changer_ordre(self):
         screen = DOrdre(self._le2mserv.gestionnaire_graphique.screen)
         if screen.exec_():
-            pms.ordre = screen.get_ordre()
-            self._le2mserv.gestionnaire_graphique.afficher_statusbar(
+            pms.ORDRE = screen.get_ordre()
+            self._le2mserv.gestionnaire_graphique.infoserv(
                 u"Ordre: {}".format(pms.ORDRE))

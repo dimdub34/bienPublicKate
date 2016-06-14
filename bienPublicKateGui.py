@@ -188,7 +188,23 @@ class DOrdre(QtGui.QDialog):
         layout = QtGui.QVBoxLayout(self)
 
         wexpl = WExplication(parent=self, text=txt.get_expl_ordres())
+        layout.addWidget(wexpl)
 
-        self._ordres = WCombo(parent=self, label=u"Choisir l'ordre",
+        self._combo_ordres = WCombo(parent=self, label=u"Choisir l'ordre",
                               items=["B_P_DP", "B_D_DP", "B_DP_D", "B_D_D_1",
                                      "B_D_D_2"])
+        self._combo_ordres.ui.comboBox.setCurrentIndex(pms.ORDRE)
+        layout.addWidget(self._combo_ordres)
+
+        buttons = QtGui.QDialogButtonBox(
+            QtGui.QDialogButtonBox.Cancel | QtGui.QDialogButtonBox.Ok)
+        buttons.rejected.connect(self.reject)
+        buttons.accepted.connect(self.accept)
+        layout.addWidget(buttons)
+
+        self.setWindowTitle(le2mtrans(u"Choix ordre"))
+        self.adjustSize()
+        self.setFixedSize(self.size())
+
+    def get_ordre(self):
+        return self._combo_ordres.get_currentindex()
