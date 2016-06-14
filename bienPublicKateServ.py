@@ -17,7 +17,8 @@ class Serveur(object):
     def __init__(self, le2mserv):
         self._le2mserv = le2mserv
         
-        self._traitements_lances = []
+        # self._traitements_lances = []
+        self._current_sequence = 0
 
         actions = OrderedDict()
         actions[u"Changer le paramètre 'ordre'"] = self._changer_ordre
@@ -34,7 +35,7 @@ class Serveur(object):
         actions[u"Démarrer - désapprobation avec prélèvement"] = lambda _: \
             self._demarrer(pms.DESAPPROBATION_PRELEVEMENT)
         actions[u"Afficher les gains"] = lambda _: self._le2mserv. \
-            gestionnaire_experience.afficher_ecran_gains_partie(
+            gestionnaire_experience.display_payoffs_onserver(
             "bienPublicKate")
         self._le2mserv.gestionnaire_graphique.add_topartmenu(
             u"Bien Public Kate", actions)
@@ -80,11 +81,12 @@ class Serveur(object):
         self._le2mserv.gestionnaire_graphique.infoserv(
             [u"Traitement: " + txt.get_txt_treatment(),
              u"Rend. cpte indiv: {}".format(pms.RENDEMENT_COMPTE_INDIVIDUEL)])
-        self._traitements_lances.append(pms.TRAITEMENT)
+        # self._traitements_lances.append(pms.TRAITEMENT)
 
         # configure part (player and remote)
+        self._current_sequence += 1
         yield (self._le2mserv.gestionnaire_experience.run_step(
-            u"Configure", self._tous, "configure"))
+            u"Configure", self._tous, "configure", self._current_sequence))
 
         # form groups
         self._le2mserv.gestionnaire_groupes.former_groupes(
@@ -149,7 +151,6 @@ class Serveur(object):
                 # each group
                 for v in self._le2mserv.gestionnaire_groupes.get_groupes(
                         "bienPublicKate").viewvalues():
-                    logger.debug("v: {}".format(v))
                     # each player of the group
                     for j in v:
                         total_contre_j = 0
@@ -173,7 +174,7 @@ class Serveur(object):
                 self._le2mserv.gestionnaire_graphique.infoclt(
                     u"Désapprobations reçues")
                 for j in self._tous:
-                    j.joueur.afficher_info(u"{}".format(
+                    j.joueur.info(u"{}".format(
                         j.currentperiod.BPK_desapprobation_recu))
 
             # period payoffs ---------------------------------------------------
@@ -186,11 +187,12 @@ class Serveur(object):
 
         # end of part ==========================================================
         # on tire au sort une partie jouée
-        partie_tiree = random.randint(0, len(self._traitements_lances) - 1)
+        # partie_tiree = random.randint(0, len(self._traitements_lances) - 1)
+        drawn_sequence = random.randint(1, self._current_sequence)
         self._le2mserv.gestionnaire_graphique.infoserv(
-            u"Partiée rénumérée: {}".format(partie_tiree + 1))
+            u"Partie rénumérée: {}".format(drawn_sequence))
         yield (self._le2mserv.gestionnaire_experience.finalize_part(
-            "bienPublicKate", partie_tiree))
+            "bienPublicKate", drawn_sequence))
 
     def _changer_ordre(self):
         screen = DOrdre(self._le2mserv.gestionnaire_graphique.screen)

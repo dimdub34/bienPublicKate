@@ -5,8 +5,6 @@ from twisted.internet import defer
 from client.cltgui.cltguidialogs import GuiRecapitulatif
 import logging
 import random
-
-
 import bienPublicKateParams as pms
 import bienPublicKateTexts as txt
 from bienPublicKateGui import DDecision, GuiDesapprobation
@@ -17,6 +15,8 @@ logger = logging.getLogger("le2m.{}".format(__name__))
 class RemoteBPK(IRemote):
     def __init__(self, le2mclt):
         IRemote.__init__(self, le2mclt)
+        self._payoffs = {}
+        self._histo_vars = []
 
     def remote_configure(self, params, currentsequence):
         logger.info(u"{} configure".format(self.le2mclt.uid))
@@ -24,7 +24,12 @@ class RemoteBPK(IRemote):
         for k, v in params.viewitems():
             setattr(pms, k, v)
 
-    def remote_newperiod(self, periode):
+        self._histo_vars = ["BPK_periode", "BPK_individuel", "BPK_collectif",
+                            "BPK_collectif_groupe", "BPK_gain_individuel",
+                            "BPK_gain_collectif", "BPK_periodpayoff",
+                            "BPK_cumulativepayoff"]
+
+    def remote_new_period(self, periode):
         logger.info(u"{} Period {}".format(self.le2mclt.uid, periode))
         self.currentperiod = periode
         if self.currentperiod == 1:
@@ -58,7 +63,7 @@ class RemoteBPK(IRemote):
         """
         logger.info("Ecran désapprobation")
         logger.debug("decisions_membres: {}".format(decisions_membres))
-        if self.le2mclt.is_simulation():
+        if self.le2mclt.simulation:
             renvoi = dict()
             for k in decisions_membres.viewkeys():
                 renvoi[k] = random.randint(

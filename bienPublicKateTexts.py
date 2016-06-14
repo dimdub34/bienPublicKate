@@ -10,6 +10,7 @@ def get_expl_ordres():
            u"DP=désapprobation avec prélèvement.\n " \
            u"Donc B_P_D signifie baseline puis prélèvement puis désapprobation."
 
+
 def get_txt_treatment():
     if pms.TRAITEMENT == pms.BASELINE:
         return u"Baseline"
@@ -63,7 +64,7 @@ votre groupe a placé {} sur le compte collectif.". \
            u"du compte collectif, {}, soit {}.</p>".format(
                 get_pluriel(period_content.BPK_gain_individuel, pms.MONNAIE),
                 get_pluriel(period_content.BPK_gain_collectif, pms.MONNAIE),
-                get_pluriel(period_content.BPK_gain_period))
+                get_pluriel(period_content.BPK_periodpayoff, pms.MONNAIE))
 
     return txt
 

@@ -81,8 +81,8 @@ class PartieBPK(Partie):
             self.currentperiod.BPK_collectif_groupe)
         desapprobation_start = datetime.now()
         desapprobations = yield (self.remote.callRemote(
-            "afficher_ecran_desapprobation", self.currentperiod.BPK_periode,
-            explic_desapprobation, decisions_membres_groupe))
+            "display_desapprobation", explic_desapprobation,
+            decisions_membres_groupe))
         desapprobation_end = datetime.now()
         self.currentperiod.BPK_desapprobation_time = (
             desapprobation_end - desapprobation_start).seconds
@@ -112,7 +112,7 @@ class PartieBPK(Partie):
                 BPK_periodpayoff
         else:
             self.currentperiod.BPK_cumulativepayoff = \
-                self._periodes[
+                self.periods[
                     self.currentperiod.BPK_periode - 1].BPK_cumulativepayoff + \
                 self.currentperiod.BPK_periodpayoff
 
@@ -125,22 +125,20 @@ class PartieBPK(Partie):
 
     @defer.inlineCallbacks
     def display_summary(self):
-        txt_summary = txt.get_txt_summary(self.currentperiod)
         period_dict = self.currentperiod.todict()
         yield (self.remote.callRemote(
-            "display_summary", txt_summary, period_dict))
+            "display_summary", period_dict))
         self.joueur.info("Ok")
         self.joueur.remove_waitmode()
 
+    @defer.inlineCallbacks
     def compute_partpayoff(self, which_sequence):
         self._sequences[self._currentsequence] = self.periods.copy()
-
-        assert (which_sequence <= len(self._sequences))
         logger.debug(u"Partie tirée: {}".format(which_sequence))
-
         self.BPK_gain_ecus = self._sequences[which_sequence][pms.
             NOMBRE_PERIODES].BPK_cumulativepayoff
-        self.BPK_gain_euros = self.BPK_gain_ecus * pms.TAUX_CONVERSION
+        self.BPK_gain_euros = float("{:.2f}".format(
+            self.BPK_gain_ecus * pms.TAUX_CONVERSION))
         yield (self.remote.callRemote(
             "set_payoffs", self.BPK_gain_ecus, self.BPK_gain_euros))
         logger.debug('gain ecus:{}, gain euros: {:.2f}'.format(
