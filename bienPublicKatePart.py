@@ -79,16 +79,18 @@ class PartieBPK(Partie):
         explic_desapprobation = txt.get_expl_desapprobation(
             self.currentperiod.BPK_collectif,
             self.currentperiod.BPK_collectif_groupe)
+
         desapprobation_start = datetime.now()
         desapprobations = yield (self.remote.callRemote(
             "display_desapprobation", explic_desapprobation,
             decisions_membres_groupe))
         desapprobation_end = datetime.now()
+
         self.currentperiod.BPK_desapprobation_time = (
             desapprobation_end - desapprobation_start).seconds
-
         for k, v in desapprobations.viewitems():
             setattr(self.currentperiod, "BPK_desapprobation_{}".format(k), v)
+
         self.joueur.info(u"{}".format(
             ["j{}: {}".format(
                 getattr(self.currentperiod, "BPK_membre_{}".format(k)).\

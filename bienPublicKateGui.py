@@ -69,13 +69,12 @@ class DDecision(QtGui.QDialog):
                 self, le2mtrans(u"Warning"), e.message)
 
         if not self._automatique:
-            if not self._sinistred:
-                if not QtGui.QMessageBox.question(
-                    self, le2mtrans(u"Confirmation"),
-                    le2mtrans(u"Do you confirm your choice?"),
-                    QtGui.QMessageBox.No | QtGui.QMessageBox.Yes) == \
-                        QtGui.QMessageBox.Yes:
-                    return
+            if not QtGui.QMessageBox.question(
+                self, le2mtrans(u"Confirmation"),
+                le2mtrans(u"Do you confirm your choice?"),
+                QtGui.QMessageBox.No | QtGui.QMessageBox.Yes) == \
+                    QtGui.QMessageBox.Yes:
+                return
 
         logger.info(u"Send back {}".format(decision))
         self.accept()
@@ -95,7 +94,7 @@ class WDesapprobation(QtGui.QWidget):
 
         for i in range(3):
             spb_cpte = getattr(self.ui, "spinBox_{}".format(i))
-            spb_cpte.setValue(dec_to_display[0])
+            spb_cpte.setValue(dec_to_display[i])
             spb_cpte.setReadOnly(True)
             spb_desapp = getattr(self.ui, "spinBox_des_{}".format(i))
             spb_desapp.setMinimum(pms.DESAPPROBATION_MIN)
@@ -106,8 +105,7 @@ class WDesapprobation(QtGui.QWidget):
             for i in range(3):
                 spb_desapp = getattr(self.ui, "spinBox_des_{}".format(i))
                 spb_desapp.setValue(random.randint(
-                    pms.DESAPPROBATION_MIN, pms.DESAPPROBATION_MAX,
-                    pms.DESAPPROBATION_STEP))
+                    pms.DESAPPROBATION_MIN, pms.DESAPPROBATION_MAX))
 
     def get_desapprobations(self):
         return [getattr(self.ui, "spinBox_des_{}".format(i)).value()
@@ -137,7 +135,8 @@ class GuiDesapprobation(QtGui.QDialog):
                                     text=txt.get_labs_desapprobation()[0])
         layout.addWidget(lab_desapprobation)
 
-        self._ordre = random.shuffle(range(3))
+        self._ordre = range(3)
+        random.shuffle(self._ordre)
         dec_to_display = [decisions_membres.get(i) for i in self._ordre]
         self._wid_desapprobation = WDesapprobation(
             parent=self, dec_to_display=dec_to_display,

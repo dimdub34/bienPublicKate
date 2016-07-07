@@ -146,8 +146,10 @@ class Serveur(object):
             # disapproval ------------------------------------------------------
             if pms.TRAITEMENT == pms.DESAPPROBATION or pms.TRAITEMENT == \
                     pms.DESAPPROBATION_PRELEVEMENT:
+
                 yield (self._le2mserv.gestionnaire_experience.run_step(
                     u"Désapprobation", self._tous, "display_desapprobation"))
+
                 # each group
                 for v in self._le2mserv.gestionnaire_groupes.get_groupes(
                         "bienPublicKate").viewvalues():

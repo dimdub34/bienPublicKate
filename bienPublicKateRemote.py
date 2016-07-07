@@ -49,8 +49,7 @@ class RemoteBPK(IRemote):
             defered = defer.Deferred()
             ecran_decision = DDecision(
                 defered, self.le2mclt.automatique,
-                self.le2mclt.gestionnaire_graphique.ecran_attente,
-                self.histo, self.currentperiod)
+                self.le2mclt.screen, self.histo, self.currentperiod)
             ecran_decision.show()
             return defered
 
@@ -74,8 +73,8 @@ class RemoteBPK(IRemote):
             defered = defer.Deferred()
             ecran_desapprobation = GuiDesapprobation(
                 defered, self.le2mclt.automatique,
-                self.le2mclt.gestionnaire_graphique.ecran_attente,
-                self.histo, self.currentperiod, explication, decisions_membres)
+                self.le2mclt.screen, self.histo, self.currentperiod,
+                explication, decisions_membres)
             ecran_desapprobation.show()
             return defered
 
@@ -96,8 +95,7 @@ class RemoteBPK(IRemote):
             txt_summary = txt.get_txt_summary(period_content)
             ecran_recap = GuiRecapitulatif(
                 defered,
-                self.le2mclt.automatique,
-                self.le2mclt.gestionnaire_graphique.ecran_attente,
+                self.le2mclt.automatique, self.le2mclt.screen,
                 self.currentperiod, self.histo, txt_summary)
             ecran_recap.show()
             return defered
