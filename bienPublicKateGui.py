@@ -192,7 +192,7 @@ class DOrdre(QtGui.QDialog):
         self._combo_ordres = WCombo(parent=self, label=u"Choisir l'ordre",
                               items=["B_P_DP", "B_D_DP", "B_DP_D", "B_D_D_1",
                                      "B_D_D_2"])
-        self._combo_ordres.ui.comboBox.setCurrentIndex(pms.ORDRE)
+        self._combo_ordres.combo.setCurrentIndex(pms.ORDRE)
         layout.addWidget(self._combo_ordres)
 
         buttons = QtGui.QDialogButtonBox(
